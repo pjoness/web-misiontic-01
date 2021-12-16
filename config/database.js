@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const MONGO_URI = "mongodb+srv://usuario-01:misiontic@misiontic.560xf.mongodb.net/sample_training?retryWrites=true&w=majority";
+const MONGO_URI = "mongodb+srv:";
 
 exports.connect = () => {
   // Connecting to the database
