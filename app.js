@@ -6,6 +6,8 @@ const jwt = require("jsonwebtoken");
 const cors = require('cors');
 
 const User = require("./model/user");
+const Solicitud = require("./model/solicitud");
+const Credito = require("./model/credito");
 const auth = require("./middleware/auth");
 
 const app = express();
@@ -115,7 +117,7 @@ app.get('/users', async (req, res) => {
 
 app.get('/user/:id', async (req, res) => {
   const id = req.params.id
-  const user = await User.findOne({"id": id});
+  const user = await User.findOne({ "id": id });
 
   try {
     res.send(user);
@@ -141,56 +143,42 @@ app.put('/user/:id', async (req, res) => {
 
     // Create user in our database
     await User.updateOne({ id: req.params.id }, user)
-    .then(doc => {
-      if (!doc) {
-        return res.status(404).end();
-      }
-      return res.status(200).json(doc);
-    })
+      .then(doc => {
+        if (!doc) {
+          return res.status(404).end();
+        }
+        return res.status(200).json(doc);
+      })
 
   } catch (err) {
     console.log(err);
   }
 })
 
-app.get('/solicitudes', (req, res) => {
-  res.json({
-    "solicitudes": [
-      {
-        "id": 1,
-        "idCliente": 105680645,
-        "valor": 2000000,
-        "plazo": 36,
-      },
-      {
-        "id": 2,
-        "idCliente": 998889076,
-        "valor": 6000000,
-        "plazo": 36,
-      },
-      {
-        "id": 3,
-        "idCliente": 13058385,
-        "valor": 10000000,
-        "plazo": 36,
-      }
-    ]
-  })
+app.get('/solicitudes', async (req, res) => {
+  const solicitudes = await Solicitud.find({});
+
+  try {
+    res.send(solicitudes);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
-app.post('/solicitudes', (req, res) => {
-    try {
+app.post('/solicitudes', async (req, res) => {
+  try {
 
-    const { valor, plazo } = req.body;
+    const { idCliente, valor, plazo } = req.body;
 
-    if (!(valor && plazo)) {
+    if (!(idCliente && valor && plazo)) {
       res.status(400).send("All input is required");
     }
 
-    const solicitud = {
-      "valor": valor,
-      "plazo": plazo
-    }
+    const solicitud = await Solicitud.create({
+      idCliente,
+      valor,
+      plazo
+    });
 
     res.status(201).json(solicitud);
 
@@ -199,75 +187,58 @@ app.post('/solicitudes', (req, res) => {
   }
 })
 
-app.get('/creditos', (req, res) => {
-  res.json({
-    "creditos": [
-      {
-        "id": 1,
-        "idCliente": 123,
-        "valor": 5000000,
-        "plazo": 36,
-        "cuotas": [
-          {
-            "id": 1,
-            "fecha": "01-01-2021",
-            "capital": 1000,
-            "interes": 300,
-            "pagada": false
-          },
-          {
-            "id": 2,
-            "fecha": "01-01-2021",
-            "capital": 1000,
-            "interes": 300,
-            "pagado": false
-          },
-          {
-            "id": 3,
-            "fecha": "01-01-2021",
-            "capital": 1000,
-            "interes": 300,
-            "pagado": false
-          },
-          {
-            "id": 4,
-            "fecha": "01-01-2021",
-            "capital": 1000,
-            "interes": 300,
-            "pagado": false
-          },
-        ]
-      },
-      {
-        "id": 2,
-        "idCliente": 2,
-        "valor": 3000000,
-        "plazo": 24
-      },
-      {
-        "id": 3,
-        "idCliente": 3,
-        "valor": 8000000,
-        "plazo": 12
-      },
-    ]
-  })
+app.get('/solicitud/:id', async (req, res) => {
+  const id = req.params.id
+
+  const solicitud = await Solicitud.findOne({ "id": id });
+
+  try {
+    res.send(solicitud);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+app.get('/creditos', async (req, res) => {
+  const creditos = await Credito.find({});
+
+  try {
+    res.send(creditos);
+  } catch (err) {
+    res.status(500).send(err);
+  }
 })
 
-app.post('/creditos', (req, res) => {
+app.post('/creditos', async (req, res) => {
   try {
 
-    const { valor, plazo, tasa } = req.body;
+    const { idCliente, valor, plazo, tasa } = req.body;
 
-    if (!(valor && plazo && tasa )) {
+    if (!(valor && plazo && tasa)) {
       res.status(400).send("All input is required");
     }
 
-    const credito = {
-      "valor": valor,
-      "plazo": plazo,
-      "tasa": tasa
+    var cuotas = [];
+    const date = new Date();
+
+    for (let i = 0; i < plazo; i++) {
+      var c = {
+        "numero": i + 1,
+        "fecha": `01-${i}-2021`,
+        "capital": valor / plazo,
+        "interes": (valor - valor * (i / plazo)) * tasa
+      }
+      cuotas.push(c);
     }
+
+    const credito = await Credito.create({
+      idCliente,
+      valor,
+      plazo,
+      tasa,
+      cuotas,
+      date
+    });
 
     res.status(201).json(credito);
 
@@ -276,10 +247,22 @@ app.post('/creditos', (req, res) => {
   }
 });
 
+app.get('/credito/:id', async (req, res) => {
+  const id = req.params.id
+
+  const credito = await Credito.findOne({ "idCredito": id });
+
+  try {
+    res.send(credito);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+})
+
 app.delete('/user/:id', async (req, res) => {
   const id = req.params.id;
 
-  const user = await User.deleteOne({"id": id});
+  const user = await User.deleteOne({ "id": id });
 });
 
 app.listen(3000, () => {

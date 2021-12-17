@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
+const AutoIncrement = require('mongoose-sequence')(mongoose);
 
-const MONGO_URI = "mongodb+srv:";
+const MONGO_URI = "";
 
 exports.connect = () => {
   // Connecting to the database
